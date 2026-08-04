@@ -1,4 +1,4 @@
-# 🛒 PriceList
+# 🛒 SmartBuy
 
 > Compare o custo da sua lista de compras entre supermercados da sua cidade e descubra onde comprar mais barato.
 
@@ -6,7 +6,7 @@
 
 ## 📖 Sobre o projeto
 
-O **PriceList** é uma plataforma web que permite ao usuário enviar uma lista de compras e comparar automaticamente os preços em diferentes supermercados.
+O **SmartBuy** é uma plataforma web que permite ao usuário enviar uma lista de compras e comparar automaticamente os preços em diferentes supermercados.
 
 O sistema consulta os catálogos online dos mercados, calcula o valor total da lista em cada estabelecimento e apresenta a melhor opção de compra.
 
