@@ -1,9 +1,8 @@
-import { ShoppingCart, Upload, FileSpreadsheet } from "lucide-react";
+﻿import { ShoppingCart, Upload, FileSpreadsheet } from "lucide-react";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
-      {/* Header */}
       <header className="border-b border-[#E2E8F0] bg-white">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <div className="flex items-center gap-2">
@@ -16,16 +15,12 @@ export default function Home() {
             </span>
           </div>
 
-          <button
-            type="button"
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-[#0F172A] transition hover:bg-[#F8FAFC]"
-          >
+          <button className="rounded-lg px-4 py-2 text-sm font-semibold text-[#0F172A] transition hover:bg-[#F8FAFC]">
             Entrar
           </button>
         </div>
       </header>
 
-      {/* Hero */}
       <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-20 text-center">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#10B981]/10 px-4 py-2 text-sm font-medium text-[#059669]">
           <span className="h-2 w-2 rounded-full bg-[#10B981]" />
@@ -43,7 +38,6 @@ export default function Home() {
           preços nos supermercados da sua cidade.
         </p>
 
-        {/* Upload */}
         <div className="mt-12 w-full max-w-2xl rounded-2xl border-2 border-dashed border-[#CBD5E1] bg-white p-10 shadow-sm transition hover:border-[#2563EB] hover:shadow-md">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#2563EB]/10">
             <Upload className="h-7 w-7 text-[#2563EB]" />
@@ -57,10 +51,7 @@ export default function Home() {
             Arraste seu arquivo aqui ou escolha um arquivo do seu computador.
           </p>
 
-          <button
-            type="button"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-[#1D4ED8]"
-          >
+          <button className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-[#1D4ED8]">
             <FileSpreadsheet className="h-5 w-5" />
             Escolher arquivo
           </button>
@@ -70,20 +61,15 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Lista manual */}
         <div className="mt-8 flex items-center gap-3 text-sm text-[#64748B]">
           <span>ou</span>
         </div>
 
-        <button
-          type="button"
-          className="mt-4 rounded-xl border border-[#E2E8F0] bg-white px-6 py-3 font-semibold text-[#0F172A] shadow-sm transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
-        >
+        <button className="mt-4 rounded-xl border border-[#E2E8F0] bg-white px-6 py-3 font-semibold text-[#0F172A] shadow-sm transition hover:border-[#CBD5E1] hover:bg-[#F8FAFC]">
           + Criar lista manualmente
         </button>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-[#E2E8F0] bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-center px-6 py-6">
           <p className="text-sm text-[#94A3B8]">
