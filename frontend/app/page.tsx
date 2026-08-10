@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -14,10 +15,14 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [products, setProducts] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [cheapestOnly, setCheapestOnly] = useState(false);
+  const [isReadingFile, setIsReadingFile] = useState(false);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
 
     setError("");
@@ -32,6 +37,7 @@ export default function Home() {
 
     if (!isTxt && !isXlsx) {
       setSelectedFile(null);
+      setProducts([]);
       setError("Formato inválido. Selecione um arquivo TXT ou XLSX.");
       event.target.value = "";
       return;
@@ -39,12 +45,49 @@ export default function Home() {
 
     if (file.size > MAX_FILE_SIZE) {
       setSelectedFile(null);
+      setProducts([]);
       setError("O arquivo deve ter no máximo 5 MB.");
       event.target.value = "";
       return;
     }
 
     setSelectedFile(file);
+
+    if (isTxt) {
+      await readTxtFile(file);
+    } else {
+      setProducts([]);
+      setError(
+        "O arquivo XLSX foi selecionado. A leitura de planilhas será adicionada na próxima etapa.",
+      );
+    }
+  };
+
+  const readTxtFile = async (file: File) => {
+    try {
+      setIsReadingFile(true);
+      setError("");
+
+      const content = await file.text();
+
+      const productList = content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      if (productList.length === 0) {
+        setProducts([]);
+        setError("O arquivo TXT não contém produtos.");
+        return;
+      }
+
+      setProducts(productList);
+    } catch {
+      setProducts([]);
+      setError("Não foi possível ler o arquivo TXT.");
+    } finally {
+      setIsReadingFile(false);
+    }
   };
 
   const handleChooseFile = () => {
@@ -53,6 +96,7 @@ export default function Home() {
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
+    setProducts([]);
     setError("");
 
     if (fileInputRef.current) {
@@ -60,12 +104,18 @@ export default function Home() {
     }
   };
 
+  const handleRemoveProduct = (indexToRemove: number) => {
+    setProducts((currentProducts) =>
+      currentProducts.filter((_, index) => index !== indexToRemove),
+    );
+  };
+
   const handleContinue = () => {
-    if (!selectedFile) {
+    if (!selectedFile || products.length === 0) {
       return;
     }
 
-    console.log("Arquivo selecionado:", selectedFile.name);
+    console.log("Lista:", products);
     console.log("Buscar somente menor preço:", cheapestOnly);
   };
 
@@ -106,25 +156,25 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-20 text-center">
+      <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pb-20 pt-16">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-[#10B981]/10 px-4 py-2 text-sm font-medium text-[#059669]">
           <span className="h-2 w-2 rounded-full bg-[#10B981]" />
           Compra inteligente começa aqui
         </div>
 
-        <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-6xl">
+        <h1 className="text-center text-4xl font-bold tracking-tight sm:text-6xl">
           Compre melhor.
           <br />
           <span className="text-[#2563EB]">Economize mais.</span>
         </h1>
 
-        <p className="mt-6 max-w-2xl text-lg leading-8 text-[#64748B]">
+        <p className="mt-6 max-w-2xl text-center text-lg leading-8 text-[#64748B]">
           Envie sua lista de compras e descubra onde encontrar os melhores
           preços nos supermercados da sua cidade.
         </p>
 
         {/* Upload */}
-        <div className="mt-12 w-full max-w-2xl rounded-2xl border-2 border-dashed border-[#CBD5E1] bg-white p-10 shadow-sm transition hover:border-[#2563EB] hover:shadow-md">
+        <div className="mt-10 w-full max-w-2xl rounded-2xl border-2 border-dashed border-[#CBD5E1] bg-white p-8 shadow-sm">
           <input
             ref={fileInputRef}
             type="file"
@@ -139,24 +189,26 @@ export default function Home() {
                 <Upload className="h-7 w-7 text-[#2563EB]" />
               </div>
 
-              <h2 className="mt-5 text-xl font-semibold">
+              <h2 className="mt-5 text-center text-xl font-semibold">
                 Envie sua lista de compras
               </h2>
 
-              <p className="mt-2 text-sm text-[#64748B]">
+              <p className="mt-2 text-center text-sm text-[#64748B]">
                 Selecione um arquivo com os produtos que deseja pesquisar.
               </p>
 
-              <button
-                type="button"
-                onClick={handleChooseFile}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-[#1D4ED8]"
-              >
-                <FileSpreadsheet className="h-5 w-5" />
-                Escolher arquivo
-              </button>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleChooseFile}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-[#1D4ED8]"
+                >
+                  <FileSpreadsheet className="h-5 w-5" />
+                  Escolher arquivo
+                </button>
+              </div>
 
-              <p className="mt-4 text-xs text-[#94A3B8]">
+              <p className="mt-4 text-center text-xs text-[#94A3B8]">
                 Formatos aceitos: TXT e XLSX • Máximo: 5 MB
               </p>
             </>
@@ -166,12 +218,12 @@ export default function Home() {
                 <FileSpreadsheet className="h-7 w-7 text-[#10B981]" />
               </div>
 
-              <h2 className="mt-5 text-xl font-semibold">
+              <h2 className="mt-5 text-center text-xl font-semibold">
                 Arquivo selecionado
               </h2>
 
-              <div className="mx-auto mt-5 flex max-w-md items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 text-left">
-                <div className="min-w-0">
+              <div className="mx-auto mt-5 flex max-w-md items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                <div className="min-w-0 text-left">
                   <p className="truncate text-sm font-semibold text-[#0F172A]">
                     {selectedFile.name}
                   </p>
@@ -191,25 +243,83 @@ export default function Home() {
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={handleChooseFile}
-                className="mt-5 text-sm font-semibold text-[#2563EB] hover:underline"
-              >
-                Escolher outro arquivo
-              </button>
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleChooseFile}
+                  className="mt-5 text-sm font-semibold text-[#2563EB] hover:underline"
+                >
+                  Escolher outro arquivo
+                </button>
+              </div>
             </>
           )}
 
+          {isReadingFile && (
+            <p className="mt-5 text-center text-sm font-medium text-[#2563EB]">
+              Lendo sua lista...
+            </p>
+          )}
+
           {error && (
-            <div className="mt-5 rounded-xl bg-[#FEF2F2] px-4 py-3 text-sm font-medium text-[#DC2626]">
+            <div className="mt-5 rounded-xl bg-[#FEF2F2] px-4 py-3 text-center text-sm font-medium text-[#DC2626]">
               {error}
             </div>
           )}
         </div>
 
+        {/* Lista de produtos */}
+        {products.length > 0 && (
+          <div className="mt-8 w-full max-w-2xl rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Revise sua lista
+                </h2>
+
+                <p className="mt-1 text-sm text-[#64748B]">
+                  {products.length}{" "}
+                  {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
+                </p>
+              </div>
+
+              <span className="rounded-full bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#059669]">
+                TXT
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              {products.map((product, index) => (
+                <div
+                  key={`${product}-${index}`}
+                  className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#10B981]/10 text-xs font-bold text-[#059669]">
+                      {index + 1}
+                    </span>
+
+                    <span className="truncate text-sm font-medium text-[#0F172A]">
+                      {product}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveProduct(index)}
+                    aria-label={`Remover ${product}`}
+                    className="ml-3 shrink-0 rounded-lg p-2 text-[#94A3B8] transition hover:bg-[#FEE2E2] hover:text-[#EF4444]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Preferência */}
-        <div className="mt-8 w-full max-w-2xl rounded-2xl border border-[#E2E8F0] bg-white p-6 text-left shadow-sm">
+        <div className="mt-8 w-full max-w-2xl rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">
             Como você quer encontrar seus produtos?
           </h2>
@@ -239,7 +349,7 @@ export default function Home() {
         <button
           type="button"
           onClick={handleContinue}
-          disabled={!selectedFile}
+          disabled={products.length === 0}
           className="mt-8 rounded-xl bg-[#2563EB] px-8 py-3 font-semibold text-white shadow-sm transition hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:bg-[#CBD5E1]"
         >
           Continuar

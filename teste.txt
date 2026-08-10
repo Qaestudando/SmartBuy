@@ -1,1 +1,6 @@
 teste de lista de compras
+
+1 arroz 5kg
+1 açucar 5kg
+2 macarrão ninho 500gr
+1 massa de tomate
