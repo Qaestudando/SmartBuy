@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangeEvent, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import {
   FileSpreadsheet,
   ShoppingCart,
@@ -11,11 +12,18 @@ import {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+type Product = {
+  produto: string;
+  quantidade: string;
+  unidade: string;
+  marca: string;
+};
+
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [products, setProducts] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState("");
   const [cheapestOnly, setCheapestOnly] = useState(false);
   const [isReadingFile, setIsReadingFile] = useState(false);
@@ -56,10 +64,7 @@ export default function Home() {
     if (isTxt) {
       await readTxtFile(file);
     } else {
-      setProducts([]);
-      setError(
-        "O arquivo XLSX foi selecionado. A leitura de planilhas será adicionada na próxima etapa.",
-      );
+      await readXlsxFile(file);
     }
   };
 
@@ -70,16 +75,23 @@ export default function Home() {
 
       const content = await file.text();
 
-      const productList = content
+      const lines = content
         .split(/\r?\n/)
         .map((line) => line.trim())
         .filter((line) => line.length > 0);
 
-      if (productList.length === 0) {
+      if (lines.length === 0) {
         setProducts([]);
         setError("O arquivo TXT não contém produtos.");
         return;
       }
+
+      const productList: Product[] = lines.map((line) => ({
+        produto: line,
+        quantidade: "",
+        unidade: "",
+        marca: "",
+      }));
 
       setProducts(productList);
     } catch {
@@ -88,6 +100,163 @@ export default function Home() {
     } finally {
       setIsReadingFile(false);
     }
+  };
+
+  const readXlsxFile = async (file: File) => {
+    try {
+      setIsReadingFile(true);
+      setError("");
+
+      const arrayBuffer = await file.arrayBuffer();
+
+      const workbook = XLSX.read(arrayBuffer, {
+        type: "array",
+      });
+
+      if (workbook.SheetNames.length === 0) {
+        setProducts([]);
+        setError("A planilha não possui nenhuma aba.");
+        return;
+      }
+
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+
+      if (!worksheet) {
+        setProducts([]);
+        setError("Não foi possível acessar a primeira aba da planilha.");
+        return;
+      }
+
+      const rows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+        header: 1,
+        defval: "",
+        raw: false,
+      });
+
+      if (rows.length === 0) {
+        setProducts([]);
+        setError("A planilha está vazia.");
+        return;
+      }
+
+      const firstRow = rows[0];
+
+      if (!Array.isArray(firstRow)) {
+        setProducts([]);
+        setError("Não foi possível identificar as colunas da planilha.");
+        return;
+      }
+
+      const headers = firstRow.map((cell) =>
+        String(cell ?? "")
+          .trim()
+          .toLowerCase(),
+      );
+
+      const produtoIndex = findColumnIndex(headers, [
+        "produto",
+        "produtos",
+        "item",
+        "itens",
+        "descrição",
+        "descricao",
+        "nome",
+      ]);
+
+      const quantidadeIndex = findColumnIndex(headers, [
+        "quantidade",
+        "qtd",
+        "qtde",
+      ]);
+
+      const unidadeIndex = findColumnIndex(headers, [
+        "unidade",
+        "un",
+        "medida",
+      ]);
+
+      const marcaIndex = findColumnIndex(headers, [
+        "marca",
+      ]);
+
+      const hasRecognizedHeader =
+        produtoIndex !== -1 ||
+        quantidadeIndex !== -1 ||
+        unidadeIndex !== -1 ||
+        marcaIndex !== -1;
+
+      let productRows = rows;
+
+      if (hasRecognizedHeader) {
+        productRows = rows.slice(1);
+      }
+
+      const productList: Product[] = productRows
+        .map((row) => {
+          if (!Array.isArray(row)) {
+            return null;
+          }
+
+          const produto =
+            produtoIndex !== -1
+              ? String(row[produtoIndex] ?? "").trim()
+              : String(row[0] ?? "").trim();
+
+          const quantidade =
+            quantidadeIndex !== -1
+              ? String(row[quantidadeIndex] ?? "").trim()
+              : String(row[1] ?? "").trim();
+
+          const unidade =
+            unidadeIndex !== -1
+              ? String(row[unidadeIndex] ?? "").trim()
+              : String(row[2] ?? "").trim();
+
+          const marca =
+            marcaIndex !== -1
+              ? String(row[marcaIndex] ?? "").trim()
+              : String(row[3] ?? "").trim();
+
+          if (!produto) {
+            return null;
+          }
+
+          return {
+            produto,
+            quantidade,
+            unidade,
+            marca,
+          };
+        })
+        .filter((product): product is Product => product !== null);
+
+      if (productList.length === 0) {
+        setProducts([]);
+        setError(
+          "A planilha não contém produtos válidos na primeira coluna.",
+        );
+        return;
+      }
+
+      setProducts(productList);
+    } catch {
+      setProducts([]);
+      setError(
+        "Não foi possível ler a planilha. Verifique se o arquivo XLSX é válido.",
+      );
+    } finally {
+      setIsReadingFile(false);
+    }
+  };
+
+  const findColumnIndex = (
+    headers: string[],
+    possibleNames: string[],
+  ) => {
+    return headers.findIndex((header) =>
+      possibleNames.includes(header),
+    );
   };
 
   const handleChooseFile = () => {
@@ -110,8 +279,25 @@ export default function Home() {
     );
   };
 
+  const handleProductChange = (
+    index: number,
+    field: keyof Product,
+    value: string,
+  ) => {
+    setProducts((currentProducts) =>
+      currentProducts.map((product, productIndex) =>
+        productIndex === index
+          ? {
+              ...product,
+              [field]: value,
+            }
+          : product,
+      ),
+    );
+  };
+
   const handleContinue = () => {
-    if (!selectedFile || products.length === 0) {
+    if (products.length === 0) {
       return;
     }
 
@@ -130,6 +316,10 @@ export default function Home() {
 
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  const fileType = selectedFile?.name.toLowerCase().endsWith(".xlsx")
+    ? "XLSX"
+    : "TXT";
 
   return (
     <main className="min-h-screen bg-[#F8FAFC] text-[#0F172A]">
@@ -270,45 +460,128 @@ export default function Home() {
 
         {/* Lista de produtos */}
         {products.length > 0 && (
-          <div className="mt-8 w-full max-w-2xl rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
+          <div className="mt-8 w-full max-w-4xl rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">
-                  Revise sua lista
-                </h2>
+                <h2 className="text-lg font-semibold">Revise sua lista</h2>
 
                 <p className="mt-1 text-sm text-[#64748B]">
                   {products.length}{" "}
-                  {products.length === 1 ? "produto encontrado" : "produtos encontrados"}
+                  {products.length === 1
+                    ? "produto encontrado"
+                    : "produtos encontrados"}
                 </p>
               </div>
 
               <span className="rounded-full bg-[#10B981]/10 px-3 py-1 text-sm font-semibold text-[#059669]">
-                TXT
+                {fileType}
               </span>
             </div>
 
-            <div className="mt-5 space-y-2">
+            {/* Cabeçalho */}
+            <div className="mt-6 hidden grid-cols-[2fr_1fr_1fr_1.5fr_auto] gap-3 px-3 text-xs font-semibold uppercase tracking-wide text-[#64748B] md:grid">
+              <span>Produto</span>
+              <span>Quantidade</span>
+              <span>Unidade</span>
+              <span>Marca</span>
+              <span></span>
+            </div>
+
+            <div className="mt-2 space-y-3">
               {products.map((product, index) => (
                 <div
-                  key={`${product}-${index}`}
-                  className="flex items-center justify-between rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"
+                  key={`${product.produto}-${index}`}
+                  className="grid gap-3 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 md:grid-cols-[2fr_1fr_1fr_1.5fr_auto] md:items-center"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#10B981]/10 text-xs font-bold text-[#059669]">
-                      {index + 1}
-                    </span>
+                  {/* Produto */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[#64748B] md:hidden">
+                      Produto
+                    </label>
 
-                    <span className="truncate text-sm font-medium text-[#0F172A]">
-                      {product}
-                    </span>
+                    <input
+                      type="text"
+                      value={product.produto}
+                      onChange={(event) =>
+                        handleProductChange(
+                          index,
+                          "produto",
+                          event.target.value,
+                        )
+                      }
+                      className="w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm font-medium outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10"
+                    />
                   </div>
 
+                  {/* Quantidade */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[#64748B] md:hidden">
+                      Quantidade
+                    </label>
+
+                    <input
+                      type="text"
+                      value={product.quantidade}
+                      onChange={(event) =>
+                        handleProductChange(
+                          index,
+                          "quantidade",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Ex.: 5"
+                      className="w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10"
+                    />
+                  </div>
+
+                  {/* Unidade */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[#64748B] md:hidden">
+                      Unidade
+                    </label>
+
+                    <input
+                      type="text"
+                      value={product.unidade}
+                      onChange={(event) =>
+                        handleProductChange(
+                          index,
+                          "unidade",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Ex.: kg"
+                      className="w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10"
+                    />
+                  </div>
+
+                  {/* Marca */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[#64748B] md:hidden">
+                      Marca
+                    </label>
+
+                    <input
+                      type="text"
+                      value={product.marca}
+                      onChange={(event) =>
+                        handleProductChange(
+                          index,
+                          "marca",
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Opcional"
+                      className="w-full rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/10"
+                    />
+                  </div>
+
+                  {/* Remover */}
                   <button
                     type="button"
                     onClick={() => handleRemoveProduct(index)}
-                    aria-label={`Remover ${product}`}
-                    className="ml-3 shrink-0 rounded-lg p-2 text-[#94A3B8] transition hover:bg-[#FEE2E2] hover:text-[#EF4444]"
+                    aria-label={`Remover ${product.produto}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-[#94A3B8] transition hover:bg-[#FEE2E2] hover:text-[#EF4444]"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -319,7 +592,7 @@ export default function Home() {
         )}
 
         {/* Preferência */}
-        <div className="mt-8 w-full max-w-2xl rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
+        <div className="mt-8 w-full max-w-4xl rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">
             Como você quer encontrar seus produtos?
           </h2>
