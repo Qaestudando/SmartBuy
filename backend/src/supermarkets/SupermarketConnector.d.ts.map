@@ -1,0 +1,1 @@
+{"version":3,"file":"SupermarketConnector.d.ts","sourceRoot":"","sources":["SupermarketConnector.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EACV,WAAW,EACX,YAAY,EACb,MAAM,oBAAoB,CAAC;AAE5B,MAAM,WAAW,oBAAoB;IACnC,QAAQ,CAAC,IAAI,EAAE,MAAM,CAAC;IAEtB,aAAa,CAAC,IAAI,EAAE,YAAY,GAAG,OAAO,CAAC,WAAW,EAAE,CAAC,CAAC;CAC3D"}
