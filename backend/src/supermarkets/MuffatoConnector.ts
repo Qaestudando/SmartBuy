@@ -1,4 +1,6 @@
 import axios from "axios";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import type {
   PriceResult,
   ShoppingItem,
@@ -35,6 +37,8 @@ export class MuffatoConnector implements SupermarketConnector {
         `[Muffato] Resposta recebida: ${response.status}`
       );
 
+      await this.saveDebugHtml(response.data);
+
       return this.parseResponse(response.data, item);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -63,19 +67,32 @@ export class MuffatoConnector implements SupermarketConnector {
     return parts.join(" ");
   }
 
+  private async saveDebugHtml(html: string): Promise<void> {
+    const debugDirectory = path.resolve(process.cwd(), "debug");
+    const debugFile = path.join(
+      debugDirectory,
+      "muffato-response.html"
+    );
+
+    await mkdir(debugDirectory, { recursive: true });
+    await writeFile(debugFile, html, "utf-8");
+
+    console.log(
+      `[Muffato] HTML salvo em: ${debugFile}`
+    );
+  }
+
   private parseResponse(
     html: string,
-    item: ShoppingItem
+    _item: ShoppingItem
   ): PriceResult[] {
     console.log(
       `[Muffato] HTML recebido: ${html.length} caracteres`
     );
 
     /*
-     * Nesta primeira etapa ainda não vamos interpretar
-     * o HTML do supermercado.
-     *
-     * O objetivo é validar a comunicação com o catálogo.
+     * O parser será implementado depois de analisarmos
+     * a estrutura real da resposta do supermercado.
      */
     return [];
   }
