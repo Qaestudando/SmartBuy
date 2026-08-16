@@ -49,6 +49,10 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Debug files
+debug/
+**/debug/
+
 # Local databases
 *.db
 *.sqlite
@@ -59,3 +63,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+
+# Compiled JavaScript inside source folders
+backend/src/**/*.js
+backend/src/**/*.js.map

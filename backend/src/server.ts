@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import productRoutes from "./routes/productRoutes.js";
 
 const app = express();
 const PORT = 3001;
@@ -14,6 +15,8 @@ app.get("/api/health", (_request, response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+app.use("/api/products", productRoutes);
 
 app.listen(PORT, () => {
   console.log(`SmartBuy Backend rodando em http://localhost:${PORT}`);
